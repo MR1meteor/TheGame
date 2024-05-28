@@ -148,7 +148,17 @@ local function gotoNextLevel()
 end
 
 local function stopGame(win)
-    timer.cancel("surviveTimer", "temporaryTimer")
+    timer.cancel("surviveTimer")
+    timer.cancel("temporaryTimer")
+
+    Runtime:removeEventListener("onMove", player)
+    Runtime:removeEventListener("enterFrame", player)
+    Runtime:removeEventListener("key", onKeyEvent)
+    Runtime:removeEventListener("collision", onCollision)
+
+    physics.pause()
+
+    display.remove(player)
 
     if win then
         local winText = display.newText(uiGroup, "Congratulations!", display.contentCenterX, display.contentCenterY, native.systemFont, 44)
@@ -174,6 +184,7 @@ end
 local function updateTime(event)
     if (secondsLeft == 0) then
         stopGame(true)
+        return
     end
 
     secondsLeft = secondsLeft - 1
@@ -476,6 +487,7 @@ function scene:hide( event )
         Runtime:removeEventListener("collision", onCollision)
 
         physics.pause()
+
         composer.removeScene("first-level");
 	end
 end
