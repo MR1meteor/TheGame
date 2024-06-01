@@ -1,4 +1,4 @@
--- Timers: "bonusSpawnerTimer", "temporaryTimer", "surviveTimer"
+-- Timers: "bonusSpawnerTimer", "temporaryTimer", "surviveTimer", "gunSpawnerTimer"
 
 local composer = require("composer")
 
@@ -8,16 +8,14 @@ local physics = require("physics")
 physics.start()
 physics.setGravity(0, 0);
 
-local secondsLeft = 60
-
 local backgroundGroup
 local mainGroup
 local uiGroup
 
-local surviveText
-
 local player
 local playerSpeed = 5
+local playerLives = 3
+local playerLivesUI
 local bounds
 local boundsStrokeWidth = 5
 local cautionText
@@ -43,12 +41,15 @@ local explosionBonusSpawned = false
 
 local bonusSpawnChance = 0.15
 local bonusSpawnTime = 1000 -- In ms
-local tutorialBonusActive = false
-local tutorialSpeedUpPicked = false
-local tutorialShieldPicked = false
-local tutorialExplosionPicked = false
 
-local tutorialActive = false
+local dummy
+local dummyHp = 100
+local dummyHpUI
+
+local gunSpawnChance = 0.2
+local gunSpawnTime = 1000
+local gunSpawned = false
+local bulletDamage = 5
 
 
 
@@ -162,13 +163,14 @@ local function gotoLevels()
 end
 
 local function gotoNextLevel()
-    composer.gotoScene("third-level", {time = 800, effect="crossFade"});
+    -- composer.gotoScene()
 end
 
 local function stopGame(win)
     timer.cancel("bonusSpawnerTimer")
     timer.cancel("temporaryTimer")
     timer.cancel("surviveTimer")
+    timer.cancel("gunSpawnerTimer")
 
     Runtime:removeEventListener("onMove", player)
     Runtime:removeEventListener("enterFrame", player)
@@ -190,24 +192,23 @@ local function stopGame(win)
     end
 end
 
-local function updateTime(event)
-    if (secondsLeft == 0) then
-        stopGame(true)
-        return
-    end
-
-    secondsLeft = secondsLeft - 1
- 
-    local minutes = math.floor( secondsLeft / 60 )
-    local seconds = secondsLeft % 60
- 
-    local timeDisplay = string.format("Выживи на протяжении: %02d:%02d", minutes, seconds )
-     
-    surviveText.text = timeDisplay
-end
-
 local function hideCautionText()
     cautionText.text = ""
+end
+
+local function updatePlayerLives()
+    if (playerLivesUI ~= nil) then
+        display.remove(playerLivesUI)
+    end
+
+    for i = 1, playerLives do
+        local life = display.newCircle(uiGroup, bounds.x + bounds.width / 2 - 30 - 80 * (i - 1), bounds.y - bounds.height / 2 - 50, 30)
+        life:setFillColor(1, 0, 0)
+    end
+end
+
+local function updateDummyHp()
+    dummyHpUI.height = dummyHp
 end
 
 local function flick(object, neededFlicks)
@@ -383,8 +384,6 @@ local function startRandomEnemiesSpawn()
     timer.performWithDelay(enemyExecutionTime + 1500, startRandomEnemiesSpawn, "temporaryTimer")
 end
 
-
-
 local function activateBonus(bonus)
     if (bonus == "speedUp") then
         speedUpBonusIsActive = true
@@ -408,16 +407,6 @@ local function activateBonus(bonus)
         explosionBonusIcon.alpha = 1
     end
 end
-
-local function deactivateBonus(bonus)
-    if (bonus == "speedUp") then
-        speedUpBonusIsActive = false
-        speedUpBonusIcon.alpha = 0.3
-    elseif (bonus == "shield") then
-    elseif (bonus == "explosion") then
-    end
-end
-
 
 local function spawnBonusWithChance()
     if (math.random() > bonusSpawnChance) then
@@ -466,6 +455,30 @@ local function startBonusSpawn()
     timer.performWithDelay(bonusSpawnTime, spawnBonusWithChance, -1, "bonusSpawnerTimer")
 end
 
+local function spawnGunWithChance()
+    if (math.random() > gunSpawnChance) then
+        return
+    end
+
+    if (gunSpawned) then
+        return
+    end
+
+    local gunX = math.random(bounds.x - bounds.width / 2 + boundsStrokeWidth, bounds.x + bounds.width / 2 - boundsStrokeWidth)
+    local gunY = math.random(bounds.y - bounds.height / 2 + boundsStrokeWidth, bounds.y + bounds.height / 2 - boundsStrokeWidth)
+
+    local gun = display.newCircle(mainGroup, gunX, gunY, 20);
+    gun:setFillColor(1, 1, 0)
+    gun.name = "gunCollectable"
+    physics.addBody(gun, "static");
+    gun.isSensor = true
+    gunSpawned = true
+end
+
+local function startGunSpawn()
+    timer.performWithDelay(gunSpawnTime, spawnGunWithChance, -1, "gunSpawnerTimer")
+end
+
 local function disableAllBonuses()
     speedUpBonusIcon.alpha = 0.3
     speedUpBonusIsActive = false
@@ -483,14 +496,15 @@ local function disableAllBonuses()
 end
 
 local function gameLoop()
+    dummy.alpha = 1
+    dummyHpUI.alpha = 1
+
     hideCautionText()
     disableAllBonuses()
 
-    surviveText.alpha = 1
-    timer.performWithDelay(1000, updateTime, -1, "surviveTimer")
-
     startRandomEnemiesSpawn()
     startBonusSpawn()
+    startGunSpawn()
 end
 
 local function performShield()
@@ -538,6 +552,36 @@ local function performExplosion()
     timer.performWithDelay(1000, removeArea, "temporaryTimer")
 end
 
+local function spawnBullet(startX, startY, targetX, targetY)
+    local bullet = display.newCircle(mainGroup, startX, startY, 10);
+    bullet:setFillColor(1, 0, 0)
+    bullet.name = "bullet"
+    physics.addBody(bullet, "dynamic");
+    bullet.isSensor = true
+
+    local function removeBullet()
+        if (bullet ~= nil) then
+            display.remove(bullet)
+        end
+    end
+    transition.to(bullet, {time=500, x=targetX, y=targetY, onComplete=removeBullet})
+end
+
+local function activateGun(gunX, gunY)
+    local gun = display.newCircle(mainGroup, gunX, gunY, 50)
+    gun:setFillColor(0, 1, 1)
+
+    local function bullet() return spawnBullet(gun.x, gun.y, dummy.x, dummy.y) end
+    timer.performWithDelay(800, bullet, 3, "temporaryTimer")
+    local function removeGun()
+        if (gun ~= nil) then
+            display.remove(gun)
+        end
+        gunSpawned = false
+    end
+    timer.performWithDelay(2400, removeGun, "temporaryTimer")
+end
+
 local function onCollision(event)
     local obj1 = event.object1
     local obj2 = event.object2
@@ -569,69 +613,70 @@ local function onCollision(event)
         activateBonus(bonusType)
     end
 
-    if  obj1.name == "player" and obj2.name == "tutorialBonus" or
-        obj1.name == "tutorialBonus" and obj2.name == "player" then
+    if  obj1.name == "player" and obj2.name == "gunCollectable" or
+        obj1.name == "gunCollectable" and obj2.name == "player" then
         
-        if (tutorialBonusActive) then
-            return
-        end
-
-        local bonusType
-        if (obj1.name == "tutorialBonus") then
-            bonusType = obj1.bonusType
+        local gunX
+        local gunY
+        if (obj1.name == "gunCollectable") then
+            gunX = obj1.x
+            gunY = obj1.y
             display.remove(obj1)
         else
-            bonusType = obj2.bonusType
+            gunX = obj2.x
+            gunY = obj2.y
             display.remove(obj2)
         end
 
-        tutorialBonusActive = true
-        activateBonus(bonusType)
+        activateGun(gunX, gunY)
+    end
 
-        local function deactivateTutorialBonus() 
-            tutorialBonusActive = false
-            hideCautionText()
-            deactivateBonus(bonusType)
-        end
-
-        if (bonusType == "speedUp") then
-            cautionText.text = "Ускоритель. Длится 5 секунд"
-            tutorialSpeedUpPicked = true
-        elseif (bonusType == "shield") then
-            cautionText.text = "Щит. Неуязвимость на 2 секунды после столкновения"
-            tutorialShieldPicked = true
-        elseif (bonusType == "explosion") then
-            cautionText.text = "Взрыв! Срабатывает при столкновении"
-            tutorialExplosionPicked = true
-        end
-
-        timer.performWithDelay(2500, deactivateTutorialBonus, "temporaryTimer")
+    if  obj1.name == "bullet" and obj2.name == "boss" or
+        obj1.name == "boss" and obj2.name == "bullet" then
         
-        if (tutorialSpeedUpPicked and tutorialShieldPicked and tutorialExplosionPicked) then
-            timer.performWithDelay(2500, gameLoop, "temporaryTimer")
+        dummyHp = dummyHp - bulletDamage
+        
+        local bullet
+        if (obj1.name == "bullet") then
+            bullet = obj1
+        else
+            bullet = obj2
+        end
+
+        if (bullet ~= nil) then
+            display.remove(bullet)
+        end
+
+        updateDummyHp()
+
+        if (dummyHp <= 0) then
+            stopGame(true)
         end
     end
 end
 
 local function tutorial()
-    local speedUpBonus = display.newCircle(mainGroup, bounds.x - 200, bounds.y + 60, 20)
-    speedUpBonus:setFillColor(0, 1, 0)
-    speedUpBonus.name = "tutorialBonus"
-    speedUpBonus.bonusType = "speedUp"
-    physics.addBody(speedUpBonus, "static")
-    speedUpBonus.isSensor = true
-    local shieldBonus = display.newCircle(mainGroup, bounds.x, bounds.y + 60, 20)
-    shieldBonus:setFillColor(0, 0, 1)
-    shieldBonus.name = "tutorialBonus"
-    shieldBonus.bonusType = "shield"
-    physics.addBody(shieldBonus, "static")
-    shieldBonus.isSensor = true
-    local explosionBonus = display.newCircle(mainGroup, bounds.x + 200, bounds.y + 60, 20)
-    explosionBonus:setFillColor(1, 0, 0)
-    explosionBonus.name = "tutorialBonus"
-    explosionBonus.bonusType = "explosion"
-    physics.addBody(explosionBonus, "static")
-    explosionBonus.isSensor = true
+    local function showCaution()
+        cautionText.text = "Теперь у тебя будет противник"
+    end
+    local function showEnemy()
+        dummy.alpha = 1
+        cautionText.y = cautionText.y + 50
+        dummyHpUI.alpha = 1
+        cautionText.text = "Попробуй победить этот манекен"
+    end
+    local function showEnemyDamage()
+        cautionText.text = "Подбирай оружие, чтобы нанести урон"
+    end
+    local function showDoNotDie()
+        cautionText.text = "И постарайся не умереть слишком быстро"
+    end
+
+    showCaution()
+    timer.performWithDelay(2500, showEnemy, "temporaryTimer")
+    timer.performWithDelay(5000, showEnemyDamage, "temporaryTimer");
+    timer.performWithDelay(7500, showDoNotDie, "temporaryTimer")
+    timer.performWithDelay(10000, gameLoop, "temporaryTimer")
 end
 
 
@@ -676,15 +721,19 @@ function scene:create(event)
     explosionBonusIcon.alpha = 0.3
     explosionBonusIcon:setFillColor(1, 0, 0)
 
-    local minutes = math.floor( secondsLeft / 60 )
-    local seconds = secondsLeft % 60
-    local timeDisplay = string.format("Выживи на протяжении: %02d:%02d", minutes, seconds )
-    surviveText = display.newText(uiGroup, timeDisplay, display.contentCenterX, 50, native.systemFont, 44)
-    surviveText:setFillColor(1, 1, 0)
-    surviveText.alpha = 0
-
     cautionText = display.newText(uiGroup, "", display.contentCenterX, 110, native.systemFont, 44)
     cautionText:setFillColor(1, 0, 0)
+
+    dummy = display.newRect(mainGroup, display.contentCenterX, 60, 70, 100)
+    dummy:setFillColor(0, 0, 1)
+    dummy.alpha = 0
+    dummy.name = "boss"
+    physics.addBody(dummy, "static");
+    dummy.isSensor = true
+
+    dummyHpUI = display.newRect(uiGroup, dummy.x + 45, dummy.y, 5, 100)
+    dummyHpUI:setFillColor(1, 0, 0)
+    dummyHpUI.alpha = 0
 end
 
 
@@ -726,7 +775,7 @@ function scene:show( event )
         Runtime:addEventListener("key", onKeyEvent)
         Runtime:addEventListener("collision", onCollision)
 
-        physics.start();
+        physics.start()
 
         tutorial()
     end
@@ -744,6 +793,7 @@ function scene:hide( event )
         timer.cancel("surviveTimer")
         timer.cancel("temporaryTimer")
         timer.cancel("bonusSpawnerTimer")
+        timer.cancel("gunSpawnerTimer")
     elseif ( phase == "did" ) then
 		-- Code here runs immediately after the scene goes entirely off screen
 		Runtime:removeEventListener("onMove", player)
@@ -753,7 +803,7 @@ function scene:hide( event )
 
         physics.pause()
 
-        composer.removeScene("second-level");
+        composer.removeScene("third-level");
 	end
 end
 
