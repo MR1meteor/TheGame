@@ -26,14 +26,22 @@ function scene:create(event)
     -- background.x = display.contentCenterX
     -- background.y = display.contentCenterY
 
-    local levelsButton = display.newText(sceneGroup, "Play", display.contentCenterX, display.contentCenterY - 100, native.systemFont, 44)
+	local background = display.newImageRect(sceneGroup, "images/background.jpg", display.actualContentWidth, display.actualContentHeight)
+	background.x = display.contentCenterX
+	background.y = display.contentCenterY
+
+    local levelsButton = display.newText(sceneGroup, "Начать", display.contentCenterX, display.contentCenterY - 100, native.systemFont, 44)
     levelsButton:setFillColor(1, 1, 0)
 
-    local exitButton = display.newText(sceneGroup, "Exit", display.contentCenterX, display.contentCenterY + 100, native.systemFont, 44)
+    local exitButton = display.newText(sceneGroup, "Выход", display.contentCenterX, display.contentCenterY + 100, native.systemFont, 44)
     exitButton:setFillColor(1, 1, 0)
 
     levelsButton:addEventListener("tap", gotoLevels)
     exitButton:addEventListener("tap", exit)
+
+	local creditText = display.newText(sceneGroup, "Вдохновлено Undertale", display.contentCenterX + 470, display.contentCenterY + 200, native.systemFont, 30)
+	creditText.rotation = -45
+	creditText:setFillColor(0.8, 0.8, 0)
 
     musicTrack = audio.loadStream("audio/main-menu.mp3")
 end

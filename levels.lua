@@ -37,6 +37,10 @@ function scene:create(event)
 
     local sceneGroup = self.view
 
+    local background = display.newImageRect(sceneGroup, "images/background.jpg", display.actualContentWidth, display.actualContentHeight)
+	background.x = display.contentCenterX
+	background.y = display.contentCenterY
+
     local firstLevelButton = display.newText(sceneGroup, "1", display.contentCenterX - 200, display.contentCenterY, native.systemFont, 44)
     firstLevelButton:setFillColor(1, 1, 0)
 
@@ -52,7 +56,7 @@ function scene:create(event)
     local fifthLevelButton = display.newText(sceneGroup, "5", display.contentCenterX + 200, display.contentCenterY, native.systemFont, 44)
     fifthLevelButton:setFillColor(1, 1, 0)
 
-    local menuButton = display.newText(sceneGroup, "Menu", display.contentCenterX, display.contentCenterY + 100, native.systemFont, 44)
+    local menuButton = display.newText(sceneGroup, "Главное меню", display.contentCenterX, display.contentCenterY + 100, native.systemFont, 44)
     menuButton:setFillColor(1, 1, 0)
 
     menuButton:addEventListener("tap", gotoMenu)

@@ -10,6 +10,7 @@ physics.setGravity(0, 0);
 
 local secondsLeft = 52
 local died = false
+local isWin = false
 
 local backgroundGroup
 local mainGroup
@@ -155,6 +156,11 @@ local function gotoNextLevel()
 end
 
 local function stopGame(win)
+    if(isWin)then
+        return
+    end
+
+    isWin = win
     timer.cancel("surviveTimer")
     timer.cancel("temporaryTimer")
 
@@ -168,11 +174,11 @@ local function stopGame(win)
     display.remove(player)
 
     if win then
-        local winText = display.newText(uiGroup, "Congratulations!", display.contentCenterX, display.contentCenterY, native.systemFont, 44)
+        local winText = display.newText(uiGroup, "Уровень пройден!", display.contentCenterX, display.contentCenterY, native.systemFont, 44)
         winText:setFillColor(1, 1, 0)
         timer.performWithDelay(2000, gotoNextLevel, "temporaryTimer")
     else
-        local failreText = display.newText(uiGroup, "You are dead", display.contentCenterX, display.contentCenterY, native.systemFont, 72)
+        local failreText = display.newText(uiGroup, "Ты умер..", display.contentCenterX, display.contentCenterY, native.systemFont, 72)
         failreText:setFillColor(1, 0, 0)
         timer.performWithDelay(2000, gotoLevels, "temporaryTimer");
     end
@@ -191,17 +197,16 @@ end
 local function updateTime(event)
     if (secondsLeft == 0) then
         stopGame(true)
-        return
+    else
+        secondsLeft = secondsLeft - 1
+ 
+        local minutes = math.floor( secondsLeft / 60 )
+        local seconds = secondsLeft % 60
+    
+        local timeDisplay = string.format("Выживи на протяжении: %02d:%02d", minutes, seconds )
+        
+        surviveText.text = timeDisplay
     end
-
-    secondsLeft = secondsLeft - 1
- 
-    local minutes = math.floor( secondsLeft / 60 )
-    local seconds = secondsLeft % 60
- 
-    local timeDisplay = string.format("Выживи на протяжении: %02d:%02d", minutes, seconds )
-     
-    surviveText.text = timeDisplay
 end
 
 local function hideCautionText()
@@ -405,6 +410,10 @@ function scene:create(event)
 
     backgroundGroup = display.newGroup()
     sceneGroup:insert(backgroundGroup)
+
+    local background = display.newImageRect(backgroundGroup, "images/background.jpg", display.actualContentWidth, display.actualContentHeight)
+	background.x = display.contentCenterX
+	background.y = display.contentCenterY
 
     mainGroup = display.newGroup()
     sceneGroup:insert(mainGroup)

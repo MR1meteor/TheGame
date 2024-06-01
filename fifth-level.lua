@@ -38,12 +38,13 @@ local shieldBonusSpawned = false
 local explosionBonusIcon
 local explosionBonusIsActive = false
 local explosionBonusSpawned = false
+local explosionSprite
 
 local bonusSpawnChance = 0.15
 local bonusSpawnTime = 1000 -- In ms
 
 local dummy
-local dummyHp = 100
+local dummyHp = 9
 local dummyHpUI
 
 local gunSpawnChance = 0.2
@@ -170,6 +171,45 @@ local function gotoNextLevel()
     -- composer.gotoScene()
 end
 
+local function hideCautionText()
+    cautionText.text = ""
+end
+
+local function theEnd()
+    local function first()
+        cautionText.text = "Тебе никогда не победить меня"
+    end
+    local function second()
+        cautionText.text = "Ты слишком слаб"
+    end
+    local function third()
+        cautionText.text = "Было забавно с тобой поиграться"
+    end
+    local function fourth()
+        cautionText.text = "А теперь.."
+    end
+    local function fifth()
+        hideCautionText()
+        local endText = display.newText(uiGroup, "УМРИ", display.contentCenterX, display.contentCenterY, native.systemFont, 200)
+        endText:setFillColor(1, 0, 0)
+
+        local function performEnd()
+            local endRectangle = display.newRect(uiGroup, display.contentCenterX, display.contentCenterY, display.actualContentWidth, display.actualContentHeight);
+        end
+
+        local function closeGame()
+            os.exit(1)
+        end
+        timer.performWithDelay(800, performEnd, "temporaryTimer")
+        timer.performWithDelay(900, closeGame, "temporaryTimer")
+    end
+    first()
+    timer.performWithDelay(2500, second, "temporaryTimer")
+    timer.performWithDelay(5000, third, "temporaryTimer");
+    timer.performWithDelay(7500, fourth, "temporaryTimer");
+    timer.performWithDelay(10000, fifth, "temporaryTimer");
+end
+
 local function stopGame(win)
     timer.cancel("bonusSpawnerTimer")
     timer.cancel("temporaryTimer")
@@ -186,28 +226,11 @@ local function stopGame(win)
     display.remove(player)
 
     if win then
-        local winText = display.newText(uiGroup, "Congratulations!", display.contentCenterX, display.contentCenterY, native.systemFont, 44)
-        winText:setFillColor(1, 1, 0)
-        timer.performWithDelay(2000, gotoNextLevel, "temporaryTimer")
+        theEnd()
     else
-        local failreText = display.newText(uiGroup, "You are dead", display.contentCenterX, display.contentCenterY, native.systemFont, 72)
+        local failreText = display.newText(uiGroup, "Ты никогда меня не победишь..", display.contentCenterX, display.contentCenterY, native.systemFont, 72)
         failreText:setFillColor(1, 0, 0)
         timer.performWithDelay(2000, gotoLevels, "temporaryTimer");
-    end
-end
-
-local function hideCautionText()
-    cautionText.text = ""
-end
-
-local function updatePlayerLives()
-    if (playerLivesUI ~= nil) then
-        display.remove(playerLivesUI)
-    end
-
-    for i = 1, playerLives do
-        local life = display.newCircle(uiGroup, bounds.x + bounds.width / 2 - 30 - 80 * (i - 1), bounds.y - bounds.height / 2 - 50, 30)
-        life:setFillColor(1, 0, 0)
     end
 end
 
@@ -622,11 +645,6 @@ local function startLevitatingDummy(phase)
 end
 
 local function gameLoop()
-    startLevitatingDummy("up")
-
-    dummy.alpha = 1
-    dummyHpUI.alpha = 1
-
     hideCautionText()
     disableAllBonuses()
 
@@ -657,6 +675,15 @@ local function performExplosion()
     explosionBonusIcon.alpha = 0.3
     explosionBonusIsActive = false
     explosionBonusSpawned = false
+
+    explosionSprite.x = player.x
+    explosionSprite.y = player.y
+    explosionSprite.alpha = 1
+    explosionSprite:play()
+    local function hideSprite()
+        explosionSprite.alpha = 0
+    end
+    timer.performWithDelay(700, hideSprite, "temporaryTimer")
 
     for i = mainGroup.numChildren, 1, -1 do
         local child = mainGroup[i]
@@ -696,8 +723,9 @@ local function spawnBullet(startX, startY, targetX, targetY)
 end
 
 local function activateGun(gunX, gunY)
-    local gun = display.newCircle(mainGroup, gunX, gunY, 50)
-    gun:setFillColor(0, 1, 1)
+    local gun = display.newImageRect(mainGroup, "images/hole.png", 100, 100)
+    gun.x = gunX
+    gun.y = gunY
 
     local function bullet() return spawnBullet(gun.x, gun.y, dummy.x, dummy.y) end
     timer.performWithDelay(800, bullet, 3, "temporaryTimer")
@@ -784,27 +812,23 @@ local function onCollision(event)
 end
 
 local function tutorial()
-    local function showCaution()
-        cautionText.text = "Теперь у тебя будет противник"
+    startLevitatingDummy("up")
+
+    dummy.alpha = 1
+    dummyHpUI.alpha = 1
+    
+    cautionText.y = cautionText.y + 60
+
+    local function showFirst()
+        cautionText.text = "Ты думал что сможешь так просто меня победить?"
     end
-    local function showEnemy()
-        dummy.alpha = 1
-        cautionText.y = cautionText.y + 50
-        dummyHpUI.alpha = 1
-        cautionText.text = "Попробуй победить этот манекен"
-    end
-    local function showEnemyDamage()
-        cautionText.text = "Подбирай оружие, чтобы нанести урон"
-    end
-    local function showDoNotDie()
-        cautionText.text = "И постарайся не умереть слишком быстро"
+    local function showSecond()
+        cautionText.text = "Ты ошибаешься.."
     end
 
-    showCaution()
-    timer.performWithDelay(2500, showEnemy, "temporaryTimer")
-    timer.performWithDelay(5000, showEnemyDamage, "temporaryTimer");
-    timer.performWithDelay(7500, showDoNotDie, "temporaryTimer")
-    timer.performWithDelay(10000, gameLoop, "temporaryTimer")
+    showFirst()
+    timer.performWithDelay(2500, showSecond, "temporaryTimer")
+    timer.performWithDelay(5000, gameLoop, "temporaryTimer")
 end
 
 
@@ -818,6 +842,10 @@ function scene:create(event)
 
     backgroundGroup = display.newGroup()
     sceneGroup:insert(backgroundGroup)
+
+    local background = display.newImageRect(backgroundGroup, "images/background.jpg", display.actualContentWidth, display.actualContentHeight)
+	background.x = display.contentCenterX
+	background.y = display.contentCenterY
 
     mainGroup = display.newGroup()
     sceneGroup:insert(mainGroup)
@@ -852,6 +880,17 @@ function scene:create(event)
     explosionBonusIcon.y = shieldBonusIcon.y
     explosionBonusIcon.alpha = 0.5
     explosionBonusIcon:setFillColor(1, 0, 0)
+    local explosionImageSheet = graphics.newImageSheet("image-sheets/explosion.png", { width=192, height=192, numFrames=20 })
+    local explosionSequenceData = {
+        name="explosion",
+        start=1,
+        count=20,
+        time=700,
+        loopCount=1
+    }
+    explosionSprite = display.newSprite(mainGroup, explosionImageSheet, explosionSequenceData)
+    explosionSprite.alpha = 0
+
 
     cautionText = display.newText(uiGroup, "", display.contentCenterX, 110, native.systemFont, 44)
     cautionText:setFillColor(1, 0, 0)
@@ -915,7 +954,7 @@ function scene:show( event )
         physics.start()
 
         audio.play( musicTrack, { channel=1, loops=-1 } )
-        gameLoop()
+        tutorial()
     end
 end
 

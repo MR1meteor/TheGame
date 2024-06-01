@@ -1,3 +1,3 @@
 local composer = require("composer")
 
-composer.gotoScene("fourth-level")
+composer.gotoScene("menu")
