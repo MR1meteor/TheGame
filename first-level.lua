@@ -32,6 +32,7 @@ local upPressed = false
 local leftPressed = false
 local downPressed = false
 local rightPressed = false
+local leftStick
 
 local laserSound
 local musicTrack
@@ -57,6 +58,19 @@ local function movePlayer(axis, value)
         end
     end
 end
+
+local function moveByAxis(event)
+    if (event.axis.number == 10) then
+        movePlayer("X", event.normalizedValue)
+    elseif (event.axis.number == 11) then
+        movePlayer("Y", event.normalizedValue)
+    end
+end
+
+local function axis(event)
+    moveByAxis(event)
+end
+
 
 local function onKeyEvent(event)
     local phase = event.phase
@@ -421,6 +435,11 @@ function scene:create(event)
     uiGroup = display.newGroup()
     sceneGroup:insert(uiGroup)
 
+    local vjoy = require "vjoy"
+    leftStick = vjoy.newStick(10)
+    leftStick.x, leftStick.y = 196, display.contentHeight - 120
+    uiGroup:insert(leftStick)
+
     bounds = display.newRect(mainGroup, display.contentCenterX, display.contentCenterY + 100, 1100, 450);
     bounds:setFillColor(0, 0, 0, 0)
     bounds.strokeWidth = boundsStrokeWidth
@@ -478,6 +497,7 @@ function scene:show( event )
 
 	if ( phase == "will" ) then
 		-- Code here runs when the scene is still off screen (but is about to come on screen)
+        Runtime:addEventListener("axis", axis)
 	elseif ( phase == "did" ) then
 		-- Code here runs when the scene is entirely on screen
         Runtime:addEventListener("onMove", player)
@@ -505,6 +525,7 @@ function scene:hide( event )
         timer.cancel("temporaryTimer")
 	elseif ( phase == "did" ) then
 		-- Code here runs immediately after the scene goes entirely off screen
+        Runtime:removeEventListener("axis", axis)
         Runtime:removeEventListener("onMove", player)
         Runtime:removeEventListener("enterFrame", player)
         Runtime:removeEventListener("key", onKeyEvent)
