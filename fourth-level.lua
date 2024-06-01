@@ -49,7 +49,7 @@ local dummyHpUI
 local gunSpawnChance = 0.2
 local gunSpawnTime = 1000
 local gunSpawned = false
-local bulletDamage = 5
+local bulletDamage = 3
 
 
 
@@ -163,7 +163,7 @@ local function gotoLevels()
 end
 
 local function gotoNextLevel()
-    composer.gotoScene("fourth-level", {time = 800, effect="crossFade"});
+    -- composer.gotoScene()
 end
 
 local function stopGame(win)
@@ -363,8 +363,102 @@ local function spawnMovingBarriers()
     end
 end
 
+local function spawnBossDiagonalLasers(side)
+    local laserX
+    local laserY = bounds.y - bounds.height / 2 - 50
+    local laserRotation
+    if(side == "left")then
+        laserX = bounds.x - bounds.width / 2 + 50
+        laserRotation = -70
+    else
+        laserX = bounds.x + bounds.width / 2 - 50
+        laserRotation = 70
+    end
+
+    local laser = display.newRect(mainGroup, laserX, laserY, 100, 3000)
+    laser.name = "enemy"
+    physics.addBody(laser, "dynamic");
+    laser.isSensor = true
+
+    transition.to(laser, {time = 1500, rotation = laserRotation, iterations = 1})
+    local function removeLaser()
+        if (laser ~= nil) then
+            display.remove(laser)
+        end
+    end
+    timer.performWithDelay(1600, removeLaser, "temporaryTimer")
+
+    if(side == "right")then
+        local function leftLaser()
+            spawnBossDiagonalLasers("left")
+        end
+        timer.performWithDelay(1600, leftLaser, "temporaryTimer")
+    end
+end
+
+local function spawnShrinkingWalls()
+    local centerX = display.contentCenterX
+    local centerY = display.contentCenterY
+    local screenWidth = display.actualContentWidth
+    local screenHeight = display.actualContentHeight
+
+    local wall1 = display.newRect(mainGroup, centerX, centerY - screenHeight/2, screenWidth, 10) -- Up
+    local wall2 = display.newRect(mainGroup, centerX, centerY + screenHeight/2, screenWidth, 10) -- Down
+    local wall3 = display.newRect(mainGroup, centerX - screenWidth/2, centerY, 10, screenHeight) -- Left
+    local wall4 = display.newRect(mainGroup, centerX + screenWidth/2, centerY, 10, screenHeight) -- Right
+
+    wall1.name = "enemy"
+    wall2.name = "enemy"
+    wall3.name = "enemy"
+    wall4.name = "enemy"
+
+    physics.addBody(wall1, "dynamic")
+    physics.addBody(wall2, "dynamic")
+    physics.addBody(wall3, "dynamic")
+    physics.addBody(wall4, "dynamic")
+
+    wall1.isSensor = true
+    wall2.isSensor = true
+    wall3.isSensor = true
+    wall4.isSensor = true
+
+    local squareX = math.random(bounds.x - bounds.width / 2 + boundsStrokeWidth + 200, bounds.x + bounds.width / 2 - boundsStrokeWidth - 200)
+    local squareY = math.random(bounds.y - bounds.height / 2 + boundsStrokeWidth + 200, bounds.y + bounds.height / 2 - boundsStrokeWidth - 200)
+
+    local function moveWalls()
+        transition.to( wall1, { x = squareX, y = squareY - 50, width = 90, time = 2000 } )
+        transition.to( wall2, { x = squareX, y = squareY + 50, width = 90, time = 2000 } )
+        transition.to( wall3, { x = squareX - 50, y = squareY, height = 110, time = 2000 } )
+        transition.to( wall4, { x = squareX + 50, y = squareY, height = 110, time = 2000 } )
+    end
+
+    moveWalls()
+
+    local function removeWalls()
+        if (wall1 ~= nil) then
+           display.remove(wall1) 
+        end
+        if (wall2 ~= nil) then
+            display.remove(wall2) 
+         end
+         if (wall3 ~= nil) then
+            display.remove(wall3) 
+         end
+         if (wall4 ~= nil) then
+            display.remove(wall4) 
+         end
+    end
+
+    timer.performWithDelay(2050, removeWalls, "temporaryTimer")
+end
+
+local function startSpawnWalls()
+    spawnShrinkingWalls()
+    timer.performWithDelay(2050, spawnShrinkingWalls, 3, "temporaryTimer")
+end
+
 local function startRandomEnemiesSpawn()
-    local randomSpawnType = math.random(1, 4);
+    local randomSpawnType = math.random(1, 6);
     local enemyExecutionTime = 0
 
     if randomSpawnType == 1 then
@@ -379,6 +473,12 @@ local function startRandomEnemiesSpawn()
     elseif randomSpawnType == 4 then
         spawnMovingBarriers()
         enemyExecutionTime = 21000
+    elseif randomSpawnType == 5 then
+        spawnBossDiagonalLasers("right")
+        enemyExecutionTime = 3200
+    elseif randomSpawnType == 6 then
+        startSpawnWalls()
+        enemyExecutionTime = 8200
     end
 
     timer.performWithDelay(enemyExecutionTime + 1500, startRandomEnemiesSpawn, "temporaryTimer")
@@ -495,7 +595,28 @@ local function disableAllBonuses()
     explosionBonusSpawned = false
 end
 
+local function startLevitatingDummy(phase)
+    local newY
+    local nextPhase
+    if (phase == "up") then
+        newY = dummy.y + 20
+        nextPhase = "down"
+    else
+        newY = dummy.y - 20
+        nextPhase = "up"
+    end
+
+    transition.to(dummy, {time = 1500, y = newY})
+
+    local function next()
+        startLevitatingDummy(nextPhase)
+    end
+    timer.performWithDelay(1500, next, "temporaryTimer")
+end
+
 local function gameLoop()
+    startLevitatingDummy("up")
+
     dummy.alpha = 1
     dummyHpUI.alpha = 1
 
@@ -724,15 +845,15 @@ function scene:create(event)
     cautionText = display.newText(uiGroup, "", display.contentCenterX, 110, native.systemFont, 44)
     cautionText:setFillColor(1, 0, 0)
 
-    dummy = display.newImageRect(mainGroup, "dummy.png", 100, 130)
+    dummy = display.newImageRect(mainGroup, 'boss.png', 100, 130)
     dummy.x = display.contentCenterX
-    dummy.y = 60
+    dummy.y = 80
     dummy.alpha = 0
     dummy.name = "boss"
     physics.addBody(dummy, "static");
     dummy.isSensor = true
 
-    dummyHpUI = display.newRect(uiGroup, dummy.x + 45, dummy.y, 5, 100)
+    dummyHpUI = display.newRect(uiGroup, dummy.x + 60, dummy.y + 10, 5, 100)
     dummyHpUI:setFillColor(1, 0, 0)
     dummyHpUI.alpha = 0
 end
@@ -778,7 +899,7 @@ function scene:show( event )
 
         physics.start()
 
-        tutorial()
+        gameLoop()
     end
 end
 
@@ -804,7 +925,7 @@ function scene:hide( event )
 
         physics.pause()
 
-        composer.removeScene("third-level");
+        composer.removeScene("fourth-level");
 	end
 end
 

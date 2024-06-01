@@ -20,6 +20,10 @@ local function gotoThirdLevel()
     composer.gotoScene("third-level", { time=800, effect="crossFade" })
 end
 
+local function gotoFourthLevel()
+    composer.gotoScene("fourth-level", { time = 800, effect="crossFade" })
+end
+
 
 
 function scene:create(event)
@@ -48,6 +52,7 @@ function scene:create(event)
     firstLevelButton:addEventListener("tap", gotoFirstLevel)
     secondLevelButton:addEventListener("tap", gotoSecondLevel)
     thirdLevelButton:addEventListener("tap", gotoThirdLevel)
+    fourthLevelButton:addEventListener("tap", gotoFourthLevel)
 end
 
 
