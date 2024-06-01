@@ -2,6 +2,9 @@ local composer = require("composer")
 
 local scene = composer.newScene();
 
+local musicTrack
+audio.reserveChannels(1);
+audio.setVolume( 0.5, { channel=1 } )
 
 
 local function gotoMenu()
@@ -22,6 +25,10 @@ end
 
 local function gotoFourthLevel()
     composer.gotoScene("fourth-level", { time = 800, effect="crossFade" })
+end
+
+local function gotoFifthLevel()
+    composer.gotoScene("fifth-level", { time = 800, effect="crossFade" })
 end
 
 
@@ -53,6 +60,9 @@ function scene:create(event)
     secondLevelButton:addEventListener("tap", gotoSecondLevel)
     thirdLevelButton:addEventListener("tap", gotoThirdLevel)
     fourthLevelButton:addEventListener("tap", gotoFourthLevel)
+    fifthLevelButton:addEventListener("tap", gotoFifthLevel)
+
+    musicTrack = audio.loadStream("audio/main-menu.mp3")
 end
 
 
@@ -67,7 +77,7 @@ function scene:show( event )
 
 	elseif ( phase == "did" ) then
 		-- Code here runs when the scene is entirely on screen
-	
+        audio.play( musicTrack, { channel=1, loops=-1 } )
     end
 end
 
@@ -83,7 +93,7 @@ function scene:hide( event )
 
 	elseif ( phase == "did" ) then
 		-- Code here runs immediately after the scene goes entirely off screen
-		
+		audio.stop(1)
 	end
 end
 
@@ -93,7 +103,7 @@ function scene:destroy( event )
 
 	local sceneGroup = self.view
 	-- Code here runs prior to the removal of scene's view
-	
+	audio.dispose( musicTrack )
 end
 
 

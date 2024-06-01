@@ -2,13 +2,13 @@ local composer = require("composer")
 
 local scene = composer.newScene()
 
+local musicTrack
+audio.reserveChannels(1);
+audio.setVolume( 0.5, { channel=1 } )
 
 
 local function gotoLevels()
     composer.gotoScene("levels", { time=800, effect="crossFade" });
-end
-
-local function gotoHelp()
 end
 
 local function exit()
@@ -26,18 +26,16 @@ function scene:create(event)
     -- background.x = display.contentCenterX
     -- background.y = display.contentCenterY
 
-    local levelsButton = display.newText(sceneGroup, "Play", display.contentCenterX, display.contentCenterY - 200, native.systemFont, 44)
+    local levelsButton = display.newText(sceneGroup, "Play", display.contentCenterX, display.contentCenterY - 100, native.systemFont, 44)
     levelsButton:setFillColor(1, 1, 0)
 
-    local helpButton = display.newText(sceneGroup, "Help", display.contentCenterX, display.contentCenterY, native.systemFont, 44)
-    helpButton:setFillColor(1, 1, 0)
-
-    local exitButton = display.newText(sceneGroup, "Exit", display.contentCenterX, display.contentCenterY + 200, native.systemFont, 44)
+    local exitButton = display.newText(sceneGroup, "Exit", display.contentCenterX, display.contentCenterY + 100, native.systemFont, 44)
     exitButton:setFillColor(1, 1, 0)
 
     levelsButton:addEventListener("tap", gotoLevels)
-    helpButton:addEventListener("tap", gotoHelp)
     exitButton:addEventListener("tap", exit)
+
+    musicTrack = audio.loadStream("audio/main-menu.mp3")
 end
 
 
@@ -52,7 +50,7 @@ function scene:show( event )
 
 	elseif ( phase == "did" ) then
 		-- Code here runs when the scene is entirely on screen
-	
+        audio.play( musicTrack, { channel=1, loops=-1 } )
     end
 end
 
@@ -68,7 +66,7 @@ function scene:hide( event )
 
 	elseif ( phase == "did" ) then
 		-- Code here runs immediately after the scene goes entirely off screen
-		
+	    audio.stop(1)
 	end
 end
 
@@ -78,7 +76,7 @@ function scene:destroy( event )
 
 	local sceneGroup = self.view
 	-- Code here runs prior to the removal of scene's view
-	
+	audio.dispose( musicTrack )
 end
 
 

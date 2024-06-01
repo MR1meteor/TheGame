@@ -32,6 +32,13 @@ local leftPressed = false
 local downPressed = false
 local rightPressed = false
 
+local laserSound
+local musicTrack
+local skyLaserSound
+
+audio.reserveChannels(1);
+audio.setVolume( 0.5, { channel=1 } )
+
 
 
 local function movePlayer(axis, value)
@@ -234,6 +241,7 @@ local function spawnHorizontalLasers()
         local function activateLaser() 
             physics.addBody(laser, "dynamic")
             laser.isSensor = true
+            audio.play(laserSound)
         end
         timer.performWithDelay(2000, activateLaser, "temporaryTimer")
 
@@ -262,6 +270,7 @@ local function spawnVerticalLasers()
         local function activateLaser() 
             physics.addBody(laser, "dynamic")
             laser.isSensor = true
+            audio.play(laserSound)
         end
         timer.performWithDelay(2000, activateLaser, "temporaryTimer")
 
@@ -291,6 +300,7 @@ local function spawnSkyRays()
         local function activateRay() 
             physics.addBody(ray, "dynamic")
             ray.isSensor = true
+            audio.play(skyLaserSound)
         end
         timer.performWithDelay(1500, activateRay, "temporaryTimer")
 
@@ -422,6 +432,10 @@ function scene:create(event)
 
     cautionText = display.newText(uiGroup, "", display.contentCenterX, 150, native.systemFont, 44)
     cautionText:setFillColor(1, 0, 0)
+
+    laserSound = audio.loadSound("audio/laser.mp3")
+    skyLaserSound = audio.loadSound("audio/sky-laser.mp3")
+    musicTrack = audio.loadStream("audio/tutorials.mp3")
 end
 
 
@@ -463,7 +477,8 @@ function scene:show( event )
         Runtime:addEventListener("collision", onCollision)
 
         physics.start()
-
+        
+        audio.play( musicTrack, { channel=1, loops=-1 } )
         gameLoop()
     end
 end
@@ -488,6 +503,7 @@ function scene:hide( event )
 
         physics.pause()
 
+        audio.stop(1)
         composer.removeScene("first-level");
 	end
 end
@@ -499,6 +515,9 @@ function scene:destroy( event )
 	local sceneGroup = self.view
 	-- Code here runs prior to the removal of scene's view
 	
+    audio.dispose( laserSound )
+    audio.dispose( musicTrack )
+    audio.dispose( skyLaserSound )
 end
 
 
