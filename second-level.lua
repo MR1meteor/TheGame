@@ -50,6 +50,13 @@ local tutorialExplosionPicked = false
 
 local tutorialActive = false
 
+local laserSound
+local musicTrack
+local skyLaserSound
+
+audio.reserveChannels(1);
+audio.setVolume( 0.5, { channel=1 } )
+
 
 
 local function movePlayer(axis, value)
@@ -212,7 +219,7 @@ end
 
 local function flick(object, neededFlicks)
     if (object.flicks % 2 == 0) then
-        object.alpha = 0.3
+        object.alpha = 0.5
     else 
         object.alpha = 0.1
     end
@@ -243,6 +250,7 @@ local function spawnHorizontalLasers()
         local function activateLaser() 
             physics.addBody(laser, "dynamic")
             laser.isSensor = true
+            audio.play(laserSound)
         end
         timer.performWithDelay(2000, activateLaser, "temporaryTimer")
 
@@ -273,6 +281,7 @@ local function spawnVerticalLasers()
         local function activateLaser() 
             physics.addBody(laser, "dynamic")
             laser.isSensor = true
+            audio.play(laserSound)
         end
         timer.performWithDelay(2000, activateLaser, "temporaryTimer")
 
@@ -304,6 +313,7 @@ local function spawnSkyRays()
         local function activateRay() 
             physics.addBody(ray, "dynamic")
             ray.isSensor = true
+            audio.play(skyLaserSound)
         end
         timer.performWithDelay(1500, activateRay, "temporaryTimer")
 
@@ -393,7 +403,7 @@ local function activateBonus(bonus)
         playerSpeed = 7.5
         local function deactivateSpeedUp()
             speedUpBonusIsActive = false
-            speedUpBonusIcon.alpha = 0.3
+            speedUpBonusIcon.alpha = 0.5
             speedUpBonusSpawned = false
             playerSpeed = 5
         end
@@ -412,7 +422,7 @@ end
 local function deactivateBonus(bonus)
     if (bonus == "speedUp") then
         speedUpBonusIsActive = false
-        speedUpBonusIcon.alpha = 0.3
+        speedUpBonusIcon.alpha = 0.5
     elseif (bonus == "shield") then
     elseif (bonus == "explosion") then
     end
@@ -467,17 +477,17 @@ local function startBonusSpawn()
 end
 
 local function disableAllBonuses()
-    speedUpBonusIcon.alpha = 0.3
+    speedUpBonusIcon.alpha = 0.5
     speedUpBonusIsActive = false
     speedUpBonusSpawned = false
     playerSpeed = 5
 
-    shieldBonusIcon.alpha = 0.3
+    shieldBonusIcon.alpha = 0.5
     shieldBonusIsActive = false
     shieldBonusSpawned = false
     player.strokeWidth = 0
 
-    explosionBonusIcon.alpha = 0.3
+    explosionBonusIcon.alpha = 0.5
     explosionBonusIsActive = false
     explosionBonusSpawned = false
 end
@@ -495,7 +505,7 @@ end
 
 local function performShield()
     local function deactivate()
-        shieldBonusIcon.alpha = 0.3
+        shieldBonusIcon.alpha = 0.5
         shieldBonusIsActive = false
         shieldBonusSpawned = false
         player.strokeWidth = 0
@@ -510,9 +520,9 @@ local function performExplosion()
     end
 
     local area = display.newCircle(mainGroup, player.x, player.y, 150)
-    area:setFillColor(0, 1, 0, 0.3)
+    area:setFillColor(0, 1, 0, 0.5)
 
-    explosionBonusIcon.alpha = 0.3
+    explosionBonusIcon.alpha = 0.5
     explosionBonusIsActive = false
     explosionBonusSpawned = false
 
@@ -664,16 +674,20 @@ function scene:create(event)
     physics.addBody(player, "dynamic")
     player.isSensor = true
 
-    speedUpBonusIcon = display.newRect(uiGroup, bounds.x - bounds.width / 2 + 30, bounds.y - bounds.height / 2 - 50, 60, 60)
-    speedUpBonusIcon.alpha = 0.3
-    speedUpBonusIcon:setFillColor(0, 1, 0)
+    speedUpBonusIcon = display.newImageRect(uiGroup, "images/speed-up-bonus.png", 60, 60)
+    speedUpBonusIcon.x = bounds.x - bounds.width / 2 + 30
+    speedUpBonusIcon.y = bounds.y - bounds.height / 2 - 50
+    speedUpBonusIcon.alpha = 0.5
 
-    shieldBonusIcon = display.newRect(uiGroup, speedUpBonusIcon.x + 80, speedUpBonusIcon.y, 60, 60);
-    shieldBonusIcon.alpha = 0.3
-    shieldBonusIcon:setFillColor(0, 0, 1)
+    shieldBonusIcon = display.newImageRect(uiGroup, "images/shield-bonus.png", 60, 60);
+    shieldBonusIcon.x = speedUpBonusIcon.x + 80
+    shieldBonusIcon.y = speedUpBonusIcon.y
+    shieldBonusIcon.alpha = 0.5
     
-    explosionBonusIcon = display.newRect(uiGroup, shieldBonusIcon.x + 80, shieldBonusIcon.y, 60, 60);
-    explosionBonusIcon.alpha = 0.3
+    explosionBonusIcon = display.newImageRect(uiGroup, "images/explosion-bonus.png", 60, 60);
+    explosionBonusIcon.x = shieldBonusIcon.x + 80
+    explosionBonusIcon.y = shieldBonusIcon.y
+    explosionBonusIcon.alpha = 0.5
     explosionBonusIcon:setFillColor(1, 0, 0)
 
     local minutes = math.floor( secondsLeft / 60 )
@@ -685,6 +699,10 @@ function scene:create(event)
 
     cautionText = display.newText(uiGroup, "", display.contentCenterX, 110, native.systemFont, 44)
     cautionText:setFillColor(1, 0, 0)
+
+    laserSound = audio.loadSound("audio/laser.mp3")
+    skyLaserSound = audio.loadSound("audio/sky-laser.mp3")
+    musicTrack = audio.loadStream("audio/tutorials.mp3")
 end
 
 
@@ -728,6 +746,7 @@ function scene:show( event )
 
         physics.start();
 
+        audio.play( musicTrack, { channel=1, loops=-1 } )
         tutorial()
     end
 end
@@ -753,6 +772,7 @@ function scene:hide( event )
 
         physics.pause()
 
+        audio.stop(1)
         composer.removeScene("second-level");
 	end
 end
@@ -763,7 +783,10 @@ function scene:destroy( event )
 
 	local sceneGroup = self.view
 	-- Code here runs prior to the removal of scene's view
-	
+    
+	audio.dispose( laserSound )
+    audio.dispose( musicTrack )
+    audio.dispose( skyLaserSound )
 end
 
 
