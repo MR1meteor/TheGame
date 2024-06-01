@@ -12,6 +12,10 @@ local function gotoFirstLevel()
     composer.gotoScene("first-level", { time=800, effect="crossFade" })
 end
 
+local function gotoSecondLevel()
+    composer.gotoScene("second-level", { time=800, effect="crossFade" })
+end
+
 
 
 function scene:create(event)
@@ -38,6 +42,7 @@ function scene:create(event)
 
     menuButton:addEventListener("tap", gotoMenu)
     firstLevelButton:addEventListener("tap", gotoFirstLevel)
+    secondLevelButton:addEventListener("tap", gotoSecondLevel)
 end
 
 
